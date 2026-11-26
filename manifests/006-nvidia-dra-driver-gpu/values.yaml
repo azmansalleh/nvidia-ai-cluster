@@ -25,7 +25,7 @@ kubeletPlugin:
       operator: Exists
     - operator: Exists
 nameOverride: nvidia-dra-driver-gpu
-nvidiaDriverRoot: /run/nvidia/driver
+nvidiaDriverRoot: /
 resources:
   computeDomains:
     enabled: true

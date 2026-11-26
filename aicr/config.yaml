@@ -37,6 +37,7 @@ spec:
       - nktp:enabled=false
       - prometheus-adapter:prometheus.url=http://kube-prometheus-stack-prometheus.prometheus.svc.cluster.local
       - nvsentinel:labeler.assumeDriverInstalled=true
+      - nvidia-dra-driver-gpu:nvidiaDriverRoot=/
       argocd:
         syncRetry:
           limit: 8
