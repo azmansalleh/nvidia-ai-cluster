@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: k8s-ephemeral-storage-metrics
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: '1'
+spec:
+  project: default
+  sources:
+  - repoURL: https://jmcgrath207.github.io/k8s-ephemeral-storage-metrics/chart
+    chart: k8s-ephemeral-storage-metrics
+    targetRevision: 1.19.2
+    helm:
+      valueFiles:
+      - $values/manifests/004-k8s-ephemeral-storage-metrics/values.yaml
+  - repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+    targetRevision: main
+    ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 8
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true

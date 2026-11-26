@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nvidia-dra-driver-gpu
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: '1'
+spec:
+  project: default
+  sources:
+  - repoURL: registry.k8s.io/dra-driver-nvidia/charts
+    chart: dra-driver-nvidia-gpu
+    targetRevision: 0.5.1
+    helm:
+      valueFiles:
+      - $values/manifests/006-nvidia-dra-driver-gpu/values.yaml
+  - repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+    targetRevision: main
+    ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nvidia-dra-driver
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 8
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true

@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nvsentinel
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: '5'
+spec:
+  project: default
+  sources:
+  - repoURL: ghcr.io/nvidia
+    chart: nvsentinel
+    targetRevision: v1.31.0
+    helm:
+      valueFiles:
+      - $values/manifests/007-nvsentinel/values.yaml
+  - repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+    targetRevision: main
+    ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nvsentinel
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 8
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true

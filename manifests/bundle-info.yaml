@@ -1,0 +1,72 @@
+apiVersion: aicr.run/v1
+build:
+  deployer: argocd
+  recipe:
+    digest: sha256:11760add1110f58ec6228d7abe9a70d7a29dc1a764c09ddb19a22ac89802a1c9
+    path: recipe.yaml
+    version: 1.3.0
+  settings:
+    appName: nv-ai-cluster
+    attested: false
+    checksums: true
+    nodeScheduling:
+      accelerated:
+        selector:
+          nvidia.com/gpu.present: "true"
+        tolerations:
+          - operator: Exists
+      system:
+        tolerations:
+          - operator: Exists
+    readinessHooks: false
+    repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+    serial: false
+    storageClass: local-path
+    targetRevision: main
+    vendorCharts: false
+kind: BundleInfo
+layout:
+  entrypoint: app-of-apps.yaml
+  releases:
+    - component: nodewright-operator
+      manifest: 001-nodewright-operator/application.yaml
+      name: nodewright-operator
+      namespace: nodewright
+      path: 001-nodewright-operator
+    - component: nodewright-customizations
+      manifest: 002-nodewright-customizations/application.yaml
+      name: nodewright-customizations
+      namespace: nodewright
+      path: 002-nodewright-customizations
+    - component: cert-manager
+      manifest: 003-cert-manager/application.yaml
+      name: cert-manager
+      namespace: cert-manager
+      path: 003-cert-manager
+    - component: k8s-ephemeral-storage-metrics
+      manifest: 004-k8s-ephemeral-storage-metrics/application.yaml
+      name: k8s-ephemeral-storage-metrics
+      namespace: monitoring
+      path: 004-k8s-ephemeral-storage-metrics
+    - component: kai-scheduler
+      manifest: 005-kai-scheduler/application.yaml
+      name: kai-scheduler
+      namespace: kai-scheduler
+      path: 005-kai-scheduler
+    - component: nvidia-dra-driver-gpu
+      manifest: 006-nvidia-dra-driver-gpu/application.yaml
+      name: nvidia-dra-driver-gpu
+      namespace: nvidia-dra-driver
+      path: 006-nvidia-dra-driver-gpu
+    - component: nvsentinel
+      manifest: 007-nvsentinel/application.yaml
+      name: nvsentinel
+      namespace: nvsentinel
+      path: 007-nvsentinel
+    - component: prometheus-adapter
+      manifest: 008-prometheus-adapter/application.yaml
+      name: prometheus-adapter
+      namespace: monitoring
+      path: 008-prometheus-adapter
+metadata:
+  version: 1.3.0

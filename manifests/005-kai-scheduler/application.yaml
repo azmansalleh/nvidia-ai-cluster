@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kai-scheduler
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: '1'
+spec:
+  project: default
+  sources:
+  - repoURL: ghcr.io/kai-scheduler/kai-scheduler
+    chart: kai-scheduler
+    targetRevision: v0.16.9
+    helm:
+      valueFiles:
+      - $values/manifests/005-kai-scheduler/values.yaml
+  - repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+    targetRevision: main
+    ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kai-scheduler
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 8
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true

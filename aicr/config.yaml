@@ -1,0 +1,51 @@
+apiVersion: aicr.run/v1beta1
+kind: AICRConfig
+metadata:
+  name: h200-bcm-inference
+spec:
+  snapshot:
+    output:
+      path: aicr/snapshot.yaml
+    agent:
+      nodeSelector:
+        nvidia.com/gpu.present: 'true'
+      runtimeClassName: nvidia
+      os: ubuntu
+    execution:
+      privileged: true
+  recipe:
+    input:
+      snapshot: aicr/snapshot.yaml
+    output:
+      path: aicr/recipe.yaml
+  bundle:
+    input:
+      recipe: aicr/recipe.yaml
+    output:
+      target: manifests
+    deployment:
+      deployer: argocd
+      repo: https://github.com/azmansalleh/nv-ai-cluster.git
+      appName: nv-ai-cluster
+      set:
+      - gpu-operator:enabled=false
+      - nfd:enabled=false
+      - agentgateway:enabled=false
+      - agentgateway-crds:enabled=false
+      - kube-prometheus-stack:enabled=false
+      - prometheus-operator-crds:enabled=false
+      - nktp:enabled=false
+      - prometheus-adapter:prometheus.url=http://kube-prometheus-stack-prometheus.prometheus.svc.cluster.local
+      - nvsentinel:labeler.assumeDriverInstalled=true
+      argocd:
+        syncRetry:
+          limit: 8
+          backoff:
+            duration: 30s
+            factor: 2
+            maxDuration: 3m
+    scheduling:
+      storageClass: local-path
+      nodes: 2
+      acceleratedNodeSelector:
+        nvidia.com/gpu.present: 'true'

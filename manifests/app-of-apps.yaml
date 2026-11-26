@@ -1,0 +1,21 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nv-ai-cluster
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+    targetRevision: main
+    path: manifests
+    directory:
+      recurse: true
+      include: '*/application.yaml'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

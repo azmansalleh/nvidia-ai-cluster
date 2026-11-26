@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nodewright-operator
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: '1'
+spec:
+  project: default
+  sources:
+  - repoURL: ghcr.io/nvidia/nodewright/charts
+    chart: nodewright
+    targetRevision: v0.21.0
+    helm:
+      valueFiles:
+      - $values/manifests/001-nodewright-operator/values.yaml
+  - repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+    targetRevision: main
+    ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nodewright
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 8
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true
