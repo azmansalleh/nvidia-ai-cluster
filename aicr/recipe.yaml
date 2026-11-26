@@ -135,6 +135,8 @@ componentRefs:
     type: Helm
     valuesFile: components/agentgateway/values.yaml
     version: v1.5.0
+    overrides:
+      enabled: false
   - chart: agentgateway-crds
     healthCheckAsserts: |
       # Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
@@ -320,6 +322,8 @@ componentRefs:
     type: Helm
     valuesFile: components/agentgateway-crds/values.yaml
     version: v1.5.0
+    overrides:
+      enabled: false
   - chart: cert-manager
     dependencyRefs:
       - prometheus-operator-crds
@@ -593,6 +597,8 @@ componentRefs:
     source: ""
     type: Helm
     valuesFile: components/dra-node-labeler/values.yaml
+    overrides:
+      enabled: false
   - chart: gpu-operator
     dependencyRefs:
       - nfd
@@ -1207,6 +1213,8 @@ componentRefs:
     type: Helm
     valuesFile: components/kube-prometheus-stack/values.yaml
     version: 84.5.0
+    overrides:
+      enabled: false
   - chart: node-feature-discovery
     dependencyRefs:
       - prometheus-operator-crds
@@ -1362,6 +1370,8 @@ componentRefs:
     type: Helm
     valuesFile: components/nfd/values.yaml
     version: 0.20.1
+    overrides:
+      enabled: false
   - chart: nktp
     dependencyRefs:
       - cert-manager
@@ -1763,6 +1773,8 @@ componentRefs:
     type: Helm
     valuesFile: components/nktp/values.yaml
     version: 0.2.0
+    overrides:
+      enabled: false
   - dependencyRefs:
       - nodewright-operator
     healthCheckAsserts: |
@@ -3034,6 +3046,296 @@ componentRefs:
     type: Helm
     valuesFile: components/prometheus-operator-crds/values.yaml
     version: 28.0.1
+    overrides:
+      enabled: false
+  - chart: grove-charts
+    dependencyRefs:
+      - prometheus-operator-crds
+    healthCheckAsserts: |
+      # Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+      #
+      # Licensed under the Apache License, Version 2.0 (the "License");
+      # you may not use this file except in compliance with the License.
+      # You may obtain a copy of the License at
+      #
+      #     http://www.apache.org/licenses/LICENSE-2.0
+      #
+      # Unless required by applicable law or agreed to in writing, software
+      # distributed under the License is distributed on an "AS IS" BASIS,
+      # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      # See the License for the specific language governing permissions and
+      # limitations under the License.
+
+      # Grove Health Check
+      #
+      # Validates the Grove pod-lifecycle controller for the Dynamo inference
+      # platform. The chart deploys a single `grove-operator` Deployment in
+      # the `dynamo-system` namespace. We gate on the Available condition
+      # transitioning to True — mirrors the existing assertion in
+      # tests/chainsaw/ai-conformance/kind-inference-dynamo/assert-dynamo.yaml
+      # so this registry check produces the same readiness signal that the
+      # ai-conformance suite exercises. It also asserts every CRD the chart
+      # installs is Established.
+      apiVersion: chainsaw.kyverno.io/v1alpha1
+      kind: Test
+      metadata:
+        name: grove-health-check
+      spec:
+        timeouts:
+          assert: 5m
+        steps:
+          - name: validate-crds-established
+            # Verified against chart v0.1.0-alpha.13, which installs these six CRDs
+            # from crds/. A CRD whose shortName a leftover CRD still holds, such as
+            # clustertopologybindings after an upgrade from v0.1.0-alpha.8, never
+            # becomes Established.
+            try:
+              - assert:
+                  resource:
+                    apiVersion: apiextensions.k8s.io/v1
+                    kind: CustomResourceDefinition
+                    metadata:
+                      name: clustertopologybindings.grove.io
+                    status:
+                      (conditions[?type == 'Established']):
+                        - status: "True"
+              - assert:
+                  resource:
+                    apiVersion: apiextensions.k8s.io/v1
+                    kind: CustomResourceDefinition
+                    metadata:
+                      name: podcliques.grove.io
+                    status:
+                      (conditions[?type == 'Established']):
+                        - status: "True"
+              - assert:
+                  resource:
+                    apiVersion: apiextensions.k8s.io/v1
+                    kind: CustomResourceDefinition
+                    metadata:
+                      name: podcliquescalinggroups.grove.io
+                    status:
+                      (conditions[?type == 'Established']):
+                        - status: "True"
+              - assert:
+                  resource:
+                    apiVersion: apiextensions.k8s.io/v1
+                    kind: CustomResourceDefinition
+                    metadata:
+                      name: podcliquesets.grove.io
+                    status:
+                      (conditions[?type == 'Established']):
+                        - status: "True"
+              - assert:
+                  resource:
+                    apiVersion: apiextensions.k8s.io/v1
+                    kind: CustomResourceDefinition
+                    metadata:
+                      name: podgangmaps.grove.io
+                    status:
+                      (conditions[?type == 'Established']):
+                        - status: "True"
+              - assert:
+                  resource:
+                    apiVersion: apiextensions.k8s.io/v1
+                    kind: CustomResourceDefinition
+                    metadata:
+                      name: podgangs.scheduler.grove.io
+                    status:
+                      (conditions[?type == 'Established']):
+                        - status: "True"
+          - name: validate-grove-operator-deployment
+            try:
+              - assert:
+                  resource:
+                    apiVersion: apps/v1
+                    kind: Deployment
+                    metadata:
+                      name: grove-operator
+                      namespace: dynamo-system
+                    status:
+                      (conditions[?type == 'Available']):
+                        - status: "True"
+          - name: validate-grove-pods-healthy
+            try:
+              - error:
+                  resource:
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      namespace: dynamo-system
+                      labels:
+                        app.kubernetes.io/name: grove-operator
+                    status:
+                      phase: Pending
+              - error:
+                  resource:
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      namespace: dynamo-system
+                      labels:
+                        app.kubernetes.io/name: grove-operator
+                    status:
+                      phase: Failed
+              # JMESPath projection (not single-element match): kyverno-json's
+              # sliceNode.Assert gates on exact slice length before per-element
+              # comparison, so a `containerStatuses: - state: ...` shape only
+              # matches single-container pods and silently passes sidecars. Use
+              # `containerStatuses[?...] | length(@) > 0` to fire on any
+              # container at any index. Parallel initContainerStatuses block
+              # below catches init-container failures (invisible to
+              # containerStatuses). Per PR #1245 review (@ArangoGutierrez).
+              - error:
+                  resource:
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      namespace: dynamo-system
+                      labels:
+                        app.kubernetes.io/name: grove-operator
+                    status:
+                      ((containerStatuses || `[]`)[?state.waiting.reason == 'CrashLoopBackOff' || state.waiting.reason == 'ImagePullBackOff' || state.waiting.reason == 'ErrImagePull' || state.waiting.reason == 'CreateContainerConfigError'] | length(@) > `0`): true
+              - error:
+                  resource:
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      namespace: dynamo-system
+                      labels:
+                        app.kubernetes.io/name: grove-operator
+                    status:
+                      ((initContainerStatuses || `[]`)[?state.waiting.reason == 'CrashLoopBackOff' || state.waiting.reason == 'ImagePullBackOff' || state.waiting.reason == 'ErrImagePull' || state.waiting.reason == 'CreateContainerConfigError'] | length(@) > `0`): true
+    name: grove
+    namespace: dynamo-system
+    source: oci://ghcr.io/ai-dynamo/grove
+    type: Helm
+    valuesFile: components/grove/values.yaml
+    version: v0.1.0-alpha.13
+  - chart: dynamo-platform
+    dependencyRefs:
+      - grove
+      - cert-manager
+      - prometheus-operator-crds
+      - gpu-operator
+      - kai-scheduler
+    healthCheckAsserts: |
+      # Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES.  All rights reserved.
+      #
+      # Licensed under the Apache License, Version 2.0 (the "License");
+      # you may not use this file except in compliance with the License.
+      # You may obtain a copy of the License at
+      #
+      #     http://www.apache.org/licenses/LICENSE-2.0
+      #
+      # Unless required by applicable law or agreed to in writing, software
+      # distributed under the License is distributed on an "AS IS" BASIS,
+      # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      # See the License for the specific language governing permissions and
+      # limitations under the License.
+
+      # Dynamo Platform Health Check
+      #
+      # Validates that the Dynamo Platform is running and healthy in the
+      # dynamo-system namespace:
+      # 1. dynamocomponentdeployments.nvidia.com CRD Established=True (the
+      #    apiserver will accept DCD CRs the operator manages).
+      # 2. dynamo-operator Deployment has at least one available replica.
+      # 3. No pods stuck in Pending/Failed/Unknown phases or known-bad
+      #    container-waiting states.
+      apiVersion: chainsaw.kyverno.io/v1alpha1
+      kind: Test
+      metadata:
+        name: dynamo-platform-health-check
+      spec:
+        timeouts:
+          assert: 5m
+        steps:
+          - name: validate-dcd-crd-established
+            try:
+              - assert:
+                  resource:
+                    apiVersion: apiextensions.k8s.io/v1
+                    kind: CustomResourceDefinition
+                    metadata:
+                      name: dynamocomponentdeployments.nvidia.com
+                    status:
+                      (conditions[?type == 'Established']):
+                        - status: "True"
+          - name: validate-deployment-exists
+            try:
+              # Match by label, not name: the Helm chart prefixes the Deployment
+              # with the release name (e.g. dynamo-platform-dynamo-operator-
+              # controller-manager), so a hardcoded name: dynamo-operator never
+              # matches and the assert retries to the deadline. The chart sets a
+              # stable app.kubernetes.io/name=dynamo-operator label on the manager
+              # Deployment regardless of release name; List-and-match on it.
+              - assert:
+                  resource:
+                    apiVersion: apps/v1
+                    kind: Deployment
+                    metadata:
+                      namespace: dynamo-system
+                      labels:
+                        app.kubernetes.io/name: dynamo-operator
+                    status:
+                      (availableReplicas > `0`): true
+          - name: validate-all-pods-healthy
+            try:
+              - error:
+                  resource:
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      namespace: dynamo-system
+                    status:
+                      phase: Pending
+              - error:
+                  resource:
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      namespace: dynamo-system
+                    status:
+                      phase: Failed
+              - error:
+                  resource:
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      namespace: dynamo-system
+                    status:
+                      phase: Unknown
+              # JMESPath projection (not single-element match): kyverno-json's
+              # sliceNode.Assert gates on exact slice length before per-element
+              # comparison, so a `containerStatuses: - state: ...` shape only
+              # matches single-container pods and silently passes sidecars. Use
+              # `containerStatuses[?...] | length(@) > 0` to fire on any
+              # container at any index. Parallel initContainerStatuses block
+              # below catches init-container failures (invisible to
+              # containerStatuses). Per PR #1245 review (@ArangoGutierrez).
+              - error:
+                  resource:
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      namespace: dynamo-system
+                    status:
+                      ((containerStatuses || `[]`)[?state.waiting.reason == 'CrashLoopBackOff' || state.waiting.reason == 'ImagePullBackOff' || state.waiting.reason == 'ErrImagePull' || state.waiting.reason == 'CreateContainerConfigError'] | length(@) > `0`): true
+              - error:
+                  resource:
+                    apiVersion: v1
+                    kind: Pod
+                    metadata:
+                      namespace: dynamo-system
+                    status:
+                      ((initContainerStatuses || `[]`)[?state.waiting.reason == 'CrashLoopBackOff' || state.waiting.reason == 'ImagePullBackOff' || state.waiting.reason == 'ErrImagePull' || state.waiting.reason == 'CreateContainerConfigError'] | length(@) > `0`): true
+    name: dynamo-platform
+    namespace: dynamo-system
+    source: https://helm.ngc.nvidia.com/nvidia/ai-dynamo
+    type: Helm
+    valuesFile: components/dynamo-platform/values.yaml
+    version: 1.4.2
 constraints:
   - name: K8s.server.version
     value: '>= 1.34'
@@ -3042,7 +3344,7 @@ criteria:
   intent: inference
   nodes: 2
   os: any
-  platform: any
+  platform: dynamo
   service: bcm
 deploymentOrder:
   - agentgateway-crds
@@ -3061,6 +3363,8 @@ deploymentOrder:
   - nvidia-dra-driver-gpu
   - nvsentinel
   - prometheus-adapter
+  - grove
+  - dynamo-platform
 kind: RecipeResult
 metadata:
   appliedOverlays:

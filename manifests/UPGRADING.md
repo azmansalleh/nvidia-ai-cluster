@@ -64,3 +64,22 @@ Three changes need operator action. A fatal health-events-analyzer event now cor
 - https://github.com/NVIDIA/NVSentinel/releases/tag/v1.30.0
 - https://github.com/NVIDIA/NVSentinel/releases/tag/v1.31.0
 - https://github.com/NVIDIA/NVSentinel/blob/v1.31.0/docs/deprecations/gpu-health-monitor-dcgm-3-support-removal.md
+
+## grove: manual
+
+This bundle pins `v0.1.0-alpha.13`. Applies when upgrading from `>=0.1.0-alpha.12 <0.1.0-alpha.13` into `0.1.0-alpha.13`.
+
+alpha.13 adds status.lastScheduled to the podcliques.grove.io CRD, which its PodGang recovery logic reads, and renames the clustertopologybindings.grove.io short name from ct to ctb. helm upgrade never applies changed crds/, and the alpha.12 PodClique status schema is structural, so a plain chart bump keeps the old CRD and the API server silently prunes lastScheduled from every status write.
+
+**Steps for argocd:**
+
+1. `apply-new-crds`: helm show crds oci://ghcr.io/ai-dynamo/grove/grove-charts --version v0.1.0-alpha.13 | sed -n '/^---$/,$p' | kubectl apply --server-side --force-conflicts -f -\
+   *Why:* Neither Flux, Argo CD, nor Fleet applies a changed crds/ directory on upgrade, so the CRDs are installed out of band here too.
+2. `reconcile`: Reconcile or sync the affected releases as usual.\
+   *Why:* The deployer picks the new chart up once the CRDs are Established.
+
+**References:**
+
+- https://github.com/NVIDIA/aicr/blob/main/docs/user/component-catalog.md#grove-v010-alpha12-to-v010-alpha13
+- https://github.com/ai-dynamo/grove/releases/tag/v0.1.0-alpha.13
+- https://github.com/ai-dynamo/grove/issues/809
