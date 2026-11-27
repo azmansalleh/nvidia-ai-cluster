@@ -1,2 +1,2 @@
 name: dynamo-model-serving
-enabled: "false"
+enabled: "true"
