@@ -14,7 +14,7 @@ spec:
     helm:
       valueFiles:
       - $values/manifests/001-nodewright-operator/values.yaml
-  - repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+  - repoURL: https://github.com/azmansalleh/nvidia-ai-cluster.git
     targetRevision: main
     ref: values
   destination:

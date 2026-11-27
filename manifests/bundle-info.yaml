@@ -19,7 +19,7 @@ build:
         tolerations:
           - operator: Exists
     readinessHooks: false
-    repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+    repoURL: https://github.com/azmansalleh/nvidia-ai-cluster.git
     serial: false
     storageClass: local-path
     targetRevision: main

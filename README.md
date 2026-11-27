@@ -1,4 +1,4 @@
-# nv-ai-cluster
+# nvidia-ai-cluster
 
 BCM-managed NVIDIA H200 Kubernetes cluster for Dynamo inference.
 Configuration generated with AICR 1.3.0 and reconciled by Argo CD.

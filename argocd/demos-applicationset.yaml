@@ -9,7 +9,7 @@ spec:
     - missingkey=error
   generators:
     - git:
-        repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+        repoURL: https://github.com/azmansalleh/nvidia-ai-cluster.git
         revision: main
         files:
           - path: demos/*/config.yaml
@@ -25,7 +25,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+        repoURL: https://github.com/azmansalleh/nvidia-ai-cluster.git
         targetRevision: main
         path: 'demos/{{ .name }}/manifests'
       destination:

@@ -23,7 +23,7 @@ metadata:
     app.kubernetes.io/name: dynamo-model-serving
     app.kubernetes.io/part-of: demo
   annotations:
-    demo.nv-ai-cluster.io/upstream: https://github.com/ai-dynamo/dynamo/blob/b08b769c4b0a461303039d4c09efe33b684c5c57/recipes/nemotron-3.5-lightning/vllm/agg-h200-dspark-kv-router/deploy.yaml
+    demo.nvidia-ai-cluster.io/upstream: https://github.com/ai-dynamo/dynamo/blob/b08b769c4b0a461303039d4c09efe33b684c5c57/recipes/nemotron-3.5-lightning/vllm/agg-h200-dspark-kv-router/deploy.yaml
 spec:
   backendFramework: vllm
   components:

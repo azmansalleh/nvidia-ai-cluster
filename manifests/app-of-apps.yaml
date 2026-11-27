@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+    repoURL: https://github.com/azmansalleh/nvidia-ai-cluster.git
     targetRevision: main
     path: manifests
     directory:

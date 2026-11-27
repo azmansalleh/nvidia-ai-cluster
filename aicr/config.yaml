@@ -25,7 +25,7 @@ spec:
       target: manifests
     deployment:
       deployer: argocd
-      repo: https://github.com/azmansalleh/nv-ai-cluster.git
+      repo: https://github.com/azmansalleh/nvidia-ai-cluster.git
       appName: cluster
       set:
       - gpu-operator:enabled=false

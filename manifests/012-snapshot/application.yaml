@@ -15,7 +15,7 @@ spec:
       valueFiles:
       - $values/manifests/012-snapshot/values.yaml
       skipCrds: true
-  - repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+  - repoURL: https://github.com/azmansalleh/nvidia-ai-cluster.git
     targetRevision: main
     ref: values
   destination:
