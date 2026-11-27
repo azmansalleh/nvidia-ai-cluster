@@ -23,6 +23,7 @@ The following components are included in deployment order:
 | prometheus-adapter | Helm | 5.3.0 | 1 | monitoring |
 | grove | Helm | v0.1.0-alpha.13 | 1 | dynamo-system |
 | dynamo-platform | Helm | 1.4.2 | 5 | dynamo-system |
+| workload-map | Helm | 0.3.0 | 1 | karta-system |
 
 ## Before You Upgrade
 
@@ -142,6 +143,9 @@ path-based single-source `application.yaml`.
 ├── 010-dynamo-platform/
 │   ├── values.yaml            # Static values (multi-source helm.valueFiles)
 │   └── application.yaml       # Multi-source Application (sync-wave: 5)
+├── 011-workload-map/
+│   ├── values.yaml            # Static values (multi-source helm.valueFiles)
+│   └── application.yaml       # Multi-source Application (sync-wave: 1)
 ```
 
 `--dynamic` is not supported with `--deployer argocd` — use `--deployer
@@ -162,6 +166,7 @@ Components are deployed in order using Argo CD sync-waves:
 - **Wave 1**: prometheus-adapter
 - **Wave 1**: grove
 - **Wave 5**: dynamo-platform
+- **Wave 1**: workload-map
 
 ## Customization
 

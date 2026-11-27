@@ -21,5 +21,7 @@ Configuration generated with AICR 1.3.0 and reconciled by Argo CD.
 | Prometheus Adapter | 5.3.0 | `monitoring` |
 | Grove | v0.1.0-alpha.13 | `dynamo-system` |
 | Dynamo Platform | 1.4.2 | `dynamo-system` |
+| Workload-Map (Karta) | 0.3.0 | `karta-system` |
+| Snapshot (disabled; awaiting shared storage) | 0.3.0 | `snapshot` |
 
 GPU Operator, Node Feature Discovery, Prometheus, and gateways are managed separately.

@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: workload-map
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: '1'
+spec:
+  project: default
+  sources:
+  - repoURL: ghcr.io/dsx-ai-factory/workload-map
+    chart: karta
+    targetRevision: 0.3.0
+    helm:
+      valueFiles:
+      - $values/manifests/011-workload-map/values.yaml
+  - repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+    targetRevision: main
+    ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: karta-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 8
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true
+    - RespectIgnoreDifferences=true
+  ignoreDifferences:
+  - group: ''
+    kind: Secret
+    name: karta-operator-webhook-cert
+    namespace: karta-system
+    jsonPointers:
+    - /data
+  - group: admissionregistration.k8s.io
+    kind: MutatingWebhookConfiguration
+    name: karta-operator-mutating
+    jqPathExpressions:
+    - .webhooks[]?.clientConfig.caBundle
+  - group: admissionregistration.k8s.io
+    kind: ValidatingWebhookConfiguration
+    name: karta-operator-validating
+    jqPathExpressions:
+    - .webhooks[]?.clientConfig.caBundle
