@@ -93,6 +93,29 @@ The committed Applications also include these manual adjustments after generatio
 
 - Prefix the parent Git path, local chart paths, and child Git values paths with `manifests/`.
 - Use Helm OCI registry namespaces without `oci://`, with the chart name in `chart`.
+- On Grove's Application, preserve controller-generated certificate data and
+  webhook CA bundles using the rules below. Without these rules, self-healing
+  reapplies the chart's empty certificate fields and causes repeated restarts.
+
+```bash
+yq -i '
+  .spec.ignoreDifferences = [
+    {"group": "", "kind": "Secret", "name": "grove-webhook-server-cert",
+     "namespace": "dynamo-system", "jsonPointers": ["/data"]},
+    {"group": "admissionregistration.k8s.io", "kind": "MutatingWebhookConfiguration",
+     "name": "podcliqueset-defaulting-webhook",
+     "jqPathExpressions": [".webhooks[]?.clientConfig.caBundle"]},
+    {"group": "admissionregistration.k8s.io", "kind": "ValidatingWebhookConfiguration",
+     "name": "clustertopology-validating-webhook",
+     "jqPathExpressions": [".webhooks[]?.clientConfig.caBundle"]},
+    {"group": "admissionregistration.k8s.io", "kind": "ValidatingWebhookConfiguration",
+     "name": "podcliqueset-validating-webhook",
+     "jqPathExpressions": [".webhooks[]?.clientConfig.caBundle"]}
+  ] |
+  .spec.syncPolicy.syncOptions =
+    ((.spec.syncPolicy.syncOptions + ["RespectIgnoreDifferences=true"]) | unique)
+' manifests/009-grove/application.yaml
+```
 
 After those adjustments, refresh the bundle checksums and verify:
 
