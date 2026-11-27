@@ -3,4 +3,4 @@ kind: Kustomization
 namespace: demo-dynamo-model-serving
 resources:
   - deploy.yaml
-  - httproute.yaml
+  - model.yaml

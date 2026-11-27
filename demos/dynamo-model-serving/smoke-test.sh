@@ -4,7 +4,7 @@ set -euo pipefail
 KUBE_CONTEXT="${KUBE_CONTEXT:-kubernetes-admin@asalleh-h200-k8s}"
 DEMO_PORT="${DEMO_PORT:-18000}"
 namespace=demo-dynamo-model-serving
-model=nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4
+model=nemotron
 endpoint="http://127.0.0.1:${DEMO_PORT}"
 smoke_dir="$(mktemp -d "${TMPDIR:-/tmp}/dynamo-model-serving.XXXXXX")"
 forward_pid=
@@ -25,8 +25,8 @@ done
 kubectl --context "${KUBE_CONTEXT}" --request-timeout=20s -n "${namespace}" \
   wait --for=condition=Ready dynamographdeployment/dynamo-model-serving --timeout=10s
 
-kubectl --context "${KUBE_CONTEXT}" -n "${namespace}" \
-  port-forward svc/dynamo-model-serving-frontend "${DEMO_PORT}:8000" \
+kubectl --context "${KUBE_CONTEXT}" -n agentgateway-system \
+  port-forward svc/inference-gateway "${DEMO_PORT}:80" \
   >"${smoke_dir}/port-forward.log" 2>&1 &
 forward_pid=$!
 
@@ -53,9 +53,23 @@ PY
   sleep 2
 done
 if [[ "${listed}" != true ]]; then
-  echo "The frontend did not list ${model} within the discovery timeout." >&2
+  echo "The gateway did not list ${model} within the discovery timeout." >&2
   exit 1
 fi
+
+unknown_status="$(curl --silent --show-error --connect-timeout 5 --max-time 15 \
+  -o "${smoke_dir}/unknown.json" -w '%{http_code}' \
+  "${endpoint}/v1/chat/completions" -H 'Content-Type: application/json' \
+  --data '{"model":"unknown-smoke-test-model","messages":[{"role":"user","content":"Hello"}]}')"
+python3 - "${smoke_dir}/unknown.json" "${unknown_status}" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1]) as response:
+    body = json.load(response)
+if sys.argv[2] != '404' or body.get('error', {}).get('code') != 'model_not_found':
+    raise SystemExit('FAIL: unknown model was not rejected: ' + json.dumps(body))
+PY
 
 python3 - "${model}" >"${smoke_dir}/request.json" <<'PY'
 import json
@@ -89,7 +103,7 @@ if body.get('error') or body.get('object') != 'chat.completion' or not choices:
 message = choices[0].get('message', {})
 if not (message.get('content') or message.get('reasoning_content') or message.get('reasoning')):
     raise SystemExit('FAIL: chat completion contained no generated text')
-print('PASS: model discovery and chat completion')
+print('PASS: gateway model discovery, unknown-model rejection, and chat completion')
 if message.get('content'):
     print(message['content'])
 PY

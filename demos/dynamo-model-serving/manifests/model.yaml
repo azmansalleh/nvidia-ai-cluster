@@ -1,0 +1,26 @@
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayModel
+metadata:
+  name: nemotron
+  namespace: demo-dynamo-model-serving
+spec:
+  parentRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: inference-gateway
+    namespace: agentgateway-system
+    sectionName: http
+  provider: Custom
+  custom:
+    backendRef:
+      group: ''
+      kind: Service
+      name: dynamo-model-serving-frontend
+      port: 8000
+    formats:
+    - type: Completions
+      path: /v1/chat/completions
+  policies:
+    transformations:
+    - field: model
+      expression: '"nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4"'
