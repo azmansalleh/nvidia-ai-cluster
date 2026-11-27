@@ -10,7 +10,7 @@ spec:
   sources:
   - repoURL: https://helm.ngc.nvidia.com/nvidia/ai-dynamo
     chart: dynamo-platform
-    targetRevision: 1.4.2
+    targetRevision: 1.6.2
     helm:
       valueFiles:
       - $values/manifests/010-dynamo-platform/values.yaml

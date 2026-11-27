@@ -10,7 +10,7 @@ spec:
   sources:
   - repoURL: ghcr.io/kai-scheduler/kai-scheduler
     chart: kai-scheduler
-    targetRevision: v0.16.9
+    targetRevision: v0.17.1
     helm:
       valueFiles:
       - $values/manifests/005-kai-scheduler/values.yaml

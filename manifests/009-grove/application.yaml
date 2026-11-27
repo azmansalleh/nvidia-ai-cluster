@@ -8,15 +8,15 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: ghcr.io/ai-dynamo/grove
-      chart: grove-charts
-      targetRevision: v0.1.0-alpha.13
-      helm:
-        valueFiles:
-          - $values/manifests/009-grove/values.yaml
-    - repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
-      targetRevision: main
-      ref: values
+  - repoURL: ghcr.io/ai-dynamo/grove
+    chart: grove-charts
+    targetRevision: v0.1.0-alpha.14
+    helm:
+      valueFiles:
+      - $values/manifests/009-grove/values.yaml
+  - repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+    targetRevision: main
+    ref: values
   destination:
     server: https://kubernetes.default.svc
     namespace: dynamo-system
@@ -31,28 +31,38 @@ spec:
         factor: 2
         maxDuration: 3m
     syncOptions:
-      - CreateNamespace=true
-      - ServerSideApply=true
-      - RespectIgnoreDifferences=true
+    - CreateNamespace=true
+    - ServerSideApply=true
+    - RespectIgnoreDifferences=true
   ignoreDifferences:
-    - group: ""
-      kind: Secret
-      name: grove-webhook-server-cert
-      namespace: dynamo-system
-      jsonPointers:
-        - /data
-    - group: admissionregistration.k8s.io
-      kind: MutatingWebhookConfiguration
-      name: podcliqueset-defaulting-webhook
-      jqPathExpressions:
-        - .webhooks[]?.clientConfig.caBundle
-    - group: admissionregistration.k8s.io
-      kind: ValidatingWebhookConfiguration
-      name: clustertopology-validating-webhook
-      jqPathExpressions:
-        - .webhooks[]?.clientConfig.caBundle
-    - group: admissionregistration.k8s.io
-      kind: ValidatingWebhookConfiguration
-      name: podcliqueset-validating-webhook
-      jqPathExpressions:
-        - .webhooks[]?.clientConfig.caBundle
+  - group: ''
+    kind: Secret
+    name: grove-webhook-server-cert
+    namespace: dynamo-system
+    jsonPointers:
+    - /data
+  - group: admissionregistration.k8s.io
+    kind: MutatingWebhookConfiguration
+    name: podcliqueset-defaulting-webhook
+    jqPathExpressions:
+    - .webhooks[]?.clientConfig.caBundle
+  - group: admissionregistration.k8s.io
+    kind: ValidatingWebhookConfiguration
+    name: clustertopology-validating-webhook
+    jqPathExpressions:
+    - .webhooks[]?.clientConfig.caBundle
+  - group: admissionregistration.k8s.io
+    kind: ValidatingWebhookConfiguration
+    name: podcliqueset-validating-webhook
+    jqPathExpressions:
+    - .webhooks[]?.clientConfig.caBundle
+  - group: admissionregistration.k8s.io
+    kind: ValidatingWebhookConfiguration
+    name: podclique-validating-webhook
+    jqPathExpressions:
+    - .webhooks[]?.clientConfig.caBundle
+  - group: admissionregistration.k8s.io
+    kind: ValidatingWebhookConfiguration
+    name: podcliquescalinggroup-validating-webhook
+    jqPathExpressions:
+    - .webhooks[]?.clientConfig.caBundle

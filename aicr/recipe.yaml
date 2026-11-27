@@ -1038,7 +1038,11 @@ componentRefs:
     source: oci://ghcr.io/kai-scheduler/kai-scheduler
     type: Helm
     valuesFile: components/kai-scheduler/values.yaml
-    version: v0.16.9
+    version: v0.17.1
+    overrides:
+      scheduler:
+        args:
+          default-staleness-grace-period: -1s
   - chart: kube-prometheus-stack
     dependencyRefs:
       - prometheus-operator-crds
@@ -3211,7 +3215,14 @@ componentRefs:
     source: oci://ghcr.io/ai-dynamo/grove
     type: Helm
     valuesFile: components/grove/values.yaml
-    version: v0.1.0-alpha.13
+    version: v0.1.0-alpha.14
+    overrides:
+      crdInstaller:
+        enabled: true
+      config:
+        server:
+          healthProbes:
+            enable: true
   - chart: dynamo-platform
     dependencyRefs:
       - grove
@@ -3335,7 +3346,14 @@ componentRefs:
     source: https://helm.ngc.nvidia.com/nvidia/ai-dynamo
     type: Helm
     valuesFile: components/dynamo-platform/values.yaml
-    version: 1.4.2
+    version: 1.6.2
+    overrides:
+      global:
+        snapshot:
+          install: false
+      dynamo-operator:
+        checkpoint:
+          enabled: true
   - name: workload-map
     type: Helm
     chart: karta
@@ -3381,8 +3399,9 @@ componentRefs:
     namespace: snapshot
     dependencyRefs:
       - gpu-operator
+      - dynamo-platform
     overrides:
-      enabled: false
+      enabled: true
       runtime:
         type: containerd
       daemonset:
@@ -3406,6 +3425,13 @@ componentRefs:
             memory: 32Gi
         staging:
           sizeLimit: 16Gi
+      storage:
+        type: pvc
+        pvc:
+          create: true
+          name: snapshot-pvc
+          storageClass: local-path
+          size: 10Gi
     healthCheckAsserts: |
       apiVersion: chainsaw.kyverno.io/v1alpha1
       kind: Test

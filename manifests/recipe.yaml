@@ -438,10 +438,14 @@ componentRefs:
                       ((initContainerStatuses || `[]`)[?state.waiting.reason == 'CrashLoopBackOff' || state.waiting.reason == 'ImagePullBackOff' || state.waiting.reason == 'ErrImagePull' || state.waiting.reason == 'CreateContainerConfigError'] | length(@) > `0`): true
     name: kai-scheduler
     namespace: kai-scheduler
+    overrides:
+      scheduler:
+        args:
+          default-staleness-grace-period: -1s
     source: oci://ghcr.io/kai-scheduler/kai-scheduler
     type: Helm
     valuesFile: components/kai-scheduler/values.yaml
-    version: v0.16.9
+    version: v0.17.1
   - dependencyRefs:
       - nodewright-operator
     healthCheckAsserts: |
@@ -1747,10 +1751,17 @@ componentRefs:
                       ((initContainerStatuses || `[]`)[?state.waiting.reason == 'CrashLoopBackOff' || state.waiting.reason == 'ImagePullBackOff' || state.waiting.reason == 'ErrImagePull' || state.waiting.reason == 'CreateContainerConfigError'] | length(@) > `0`): true
     name: grove
     namespace: dynamo-system
+    overrides:
+      config:
+        server:
+          healthProbes:
+            enable: true
+      crdInstaller:
+        enabled: true
     source: oci://ghcr.io/ai-dynamo/grove
     type: Helm
     valuesFile: components/grove/values.yaml
-    version: v0.1.0-alpha.13
+    version: v0.1.0-alpha.14
   - chart: dynamo-platform
     dependencyRefs:
       - grove
@@ -1869,10 +1880,17 @@ componentRefs:
                       ((initContainerStatuses || `[]`)[?state.waiting.reason == 'CrashLoopBackOff' || state.waiting.reason == 'ImagePullBackOff' || state.waiting.reason == 'ErrImagePull' || state.waiting.reason == 'CreateContainerConfigError'] | length(@) > `0`): true
     name: dynamo-platform
     namespace: dynamo-system
+    overrides:
+      dynamo-operator:
+        checkpoint:
+          enabled: true
+      global:
+        snapshot:
+          install: false
     source: https://helm.ngc.nvidia.com/nvidia/ai-dynamo
     type: Helm
     valuesFile: components/dynamo-platform/values.yaml
-    version: 1.4.2
+    version: 1.6.2
   - chart: karta
     healthCheckAsserts: |
       apiVersion: chainsaw.kyverno.io/v1alpha1
@@ -1910,6 +1928,110 @@ componentRefs:
     source: oci://ghcr.io/dsx-ai-factory/workload-map
     type: Helm
     version: 0.3.0
+  - chart: snapshot
+    dependencyRefs:
+      - dynamo-platform
+    healthCheckAsserts: |
+      apiVersion: chainsaw.kyverno.io/v1alpha1
+      kind: Test
+      metadata:
+        name: snapshot-health-check
+      spec:
+        timeouts:
+          assert: 2m
+        steps:
+        - name: established-podsnapshots
+          try:
+          - assert:
+              resource:
+                apiVersion: apiextensions.k8s.io/v1
+                kind: CustomResourceDefinition
+                metadata:
+                  name: podsnapshots.nvidia.com
+                status:
+                  (conditions[?type == 'Established']):
+                  - status: 'True'
+        - name: established-podsnapshotcontents
+          try:
+          - assert:
+              resource:
+                apiVersion: apiextensions.k8s.io/v1
+                kind: CustomResourceDefinition
+                metadata:
+                  name: podsnapshotcontents.nvidia.com
+                status:
+                  (conditions[?type == 'Established']):
+                  - status: 'True'
+        - name: established-snapshotjobs
+          try:
+          - assert:
+              resource:
+                apiVersion: apiextensions.k8s.io/v1
+                kind: CustomResourceDefinition
+                metadata:
+                  name: snapshotjobs.nvidia.com
+                status:
+                  (conditions[?type == 'Established']):
+                  - status: 'True'
+        - name: snapshot-operator-ready
+          try:
+          - assert:
+              resource:
+                apiVersion: apps/v1
+                kind: Deployment
+                metadata:
+                  name: snapshot-operator
+                  namespace: snapshot
+                status:
+                  (availableReplicas > `0`): true
+        - name: snapshot-agents-ready
+          try:
+          - assert:
+              resource:
+                apiVersion: apps/v1
+                kind: DaemonSet
+                metadata:
+                  name: snapshot-agent
+                  namespace: snapshot
+                status:
+                  (desiredNumberScheduled > `0` && numberReady == desiredNumberScheduled): true
+    name: snapshot
+    namespace: snapshot
+    overrides:
+      daemonset:
+        nodeSelector:
+          nvidia.com/gpu.present: "true"
+        resources:
+          limits:
+            cpu: "2"
+            memory: 24Gi
+          requests:
+            cpu: "1"
+            memory: 1Gi
+        runtimeClassName: nvidia
+      enabled: true
+      pageBroker:
+        resources:
+          limits:
+            cpu: "4"
+            memory: 32Gi
+          requests:
+            cpu: "2"
+            memory: 12Gi
+        staging:
+          sizeLimit: 16Gi
+      runtime:
+        type: containerd
+      storage:
+        pvc:
+          create: true
+          name: snapshot-pvc
+          size: 10Gi
+          storageClass: local-path
+        type: pvc
+    source: oci://ghcr.io/ai-dynamo/snapshot
+    type: Helm
+    version: 0.3.0
 constraints:
   - name: K8s.server.version
     value: '>= 1.34'
@@ -1932,6 +2054,7 @@ deploymentOrder:
   - grove
   - dynamo-platform
   - workload-map
+  - snapshot
 kind: RecipeResult
 metadata:
   appliedOverlays:

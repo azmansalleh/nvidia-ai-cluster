@@ -9,3 +9,6 @@ global:
     - operator: Exists
 postCleanup:
   enabled: false
+scheduler:
+  args:
+    default-staleness-grace-period: -1s

@@ -17,13 +17,14 @@ The following components are included in deployment order:
 | nodewright-customizations | Local chart | - | 5 | nodewright |
 | cert-manager | Helm | 1.20.2 | 1 | cert-manager |
 | k8s-ephemeral-storage-metrics | Helm | 1.19.2 | 1 | monitoring |
-| kai-scheduler | Helm | v0.16.9 | 1 | kai-scheduler |
+| kai-scheduler | Helm | v0.17.1 | 1 | kai-scheduler |
 | nvidia-dra-driver-gpu | Helm | 0.5.1 | 1 | nvidia-dra-driver |
 | nvsentinel | Helm | v1.31.0 | 5 | nvsentinel |
 | prometheus-adapter | Helm | 5.3.0 | 1 | monitoring |
-| grove | Helm | v0.1.0-alpha.13 | 1 | dynamo-system |
-| dynamo-platform | Helm | 1.4.2 | 5 | dynamo-system |
+| grove | Helm | v0.1.0-alpha.14 | 1 | dynamo-system |
+| dynamo-platform | Helm | 1.6.2 | 5 | dynamo-system |
 | workload-map | Helm | 0.3.0 | 1 | karta-system |
+| snapshot | Helm | 0.3.0 | 9 | snapshot |
 
 ## Before You Upgrade
 
@@ -34,8 +35,8 @@ for the `argocd` deployer. A fresh install can skip this.
 | Component | Verdict | Applies when upgrading from |
 |-----------|---------|-----------------------------|
 | nodewright-operator | manual | `<0.18.0` |
+| kai-scheduler | manual | `>=0.16.9 <0.17.1` |
 | nvsentinel | manual | `>=1.28.0 <1.31.0` |
-| grove | manual | `>=0.1.0-alpha.12 <0.1.0-alpha.13` |
 
 ## Prerequisites
 
@@ -146,6 +147,9 @@ path-based single-source `application.yaml`.
 ├── 011-workload-map/
 │   ├── values.yaml            # Static values (multi-source helm.valueFiles)
 │   └── application.yaml       # Multi-source Application (sync-wave: 1)
+├── 012-snapshot/
+│   ├── values.yaml            # Static values (multi-source helm.valueFiles)
+│   └── application.yaml       # Multi-source Application (sync-wave: 9)
 ```
 
 `--dynamic` is not supported with `--deployer argocd` — use `--deployer
@@ -167,6 +171,7 @@ Components are deployed in order using Argo CD sync-waves:
 - **Wave 1**: grove
 - **Wave 5**: dynamo-platform
 - **Wave 1**: workload-map
+- **Wave 9**: snapshot
 
 ## Customization
 

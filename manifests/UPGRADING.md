@@ -37,6 +37,26 @@ v0.18.0 renames skyhook.nvidia.com/v1alpha1 Skyhook to nodewright.nvidia.com/v1a
 - https://github.com/NVIDIA/aicr/issues/2593
 - https://github.com/NVIDIA/aicr/issues/2594
 
+## kai-scheduler: manual
+
+This bundle pins `v0.17.1`. Applies when upgrading from `>=0.16.9 <0.17.1` into `=0.17.1`.
+
+0.17.1 replaces the global.fips boolean with global.fipsMode (on/off). The 0.17.0 chart also removes the admission.certSecretName and queuecontroller.certSecretName values; the operator uses fixed TLS secret names. Existing values must be reconciled with these chart changes.
+
+**Before you start:** This guidance covers the AICR 0.16.9 baseline and 0.17.0, assessed against the 0.17.0 and 0.17.1 release changes. Earlier sources are not assessed.
+
+**Steps for argocd:**
+
+1. `migrate-values`: Export the installed values and custom resources. If global.fips is set, replace it with global.fipsMode set to the quoted string "on" or "off". Remove admission.certSecretName and queuecontroller.certSecretName overrides; check that certificate provisioning uses kai-admission-webhook-tls-secret and queue-webhook-tls-secret.\
+   *Why:* Keeping removed keys does not configure the new chart and can silently lose the intended FIPS or certificate configuration.
+2. `reconcile-and-verify`: Apply the generated bundle through the selected deployer, then verify webhook readiness and scheduling of representative queued and gang workloads before resuming normal submissions.\
+   *Why:* Controller readiness alone does not verify existing queue and workload configuration across the chart migration.
+
+**References:**
+
+- https://github.com/kai-scheduler/KAI-Scheduler/releases/tag/v0.17.0
+- https://github.com/kai-scheduler/KAI-Scheduler/releases/tag/v0.17.1
+
 ## nvsentinel: manual
 
 This bundle pins `v1.31.0`. Applies when upgrading from `>=1.28.0 <1.31.0` into `1.31.0`.
@@ -65,21 +85,26 @@ Three changes need operator action. A fatal health-events-analyzer event now cor
 - https://github.com/NVIDIA/NVSentinel/releases/tag/v1.31.0
 - https://github.com/NVIDIA/NVSentinel/blob/v1.31.0/docs/deprecations/gpu-health-monitor-dcgm-3-support-removal.md
 
-## grove: manual
+## Dynamo 1.4.2 to 1.5.0 migration prerequisites
 
-This bundle pins `v0.1.0-alpha.13`. Applies when upgrading from `>=0.1.0-alpha.12 <0.1.0-alpha.13` into `0.1.0-alpha.13`.
+When upgrading from 1.4.2, apply these prerequisites as well as the 1.6.2 guidance above.
 
-alpha.13 adds status.lastScheduled to the podcliques.grove.io CRD, which its PodGang recovery logic reads, and renames the clustertopologybindings.grove.io short name from ct to ctb. helm upgrade never applies changed crds/, and the alpha.12 PodClique status schema is structural, so a plain chart bump keeps the old CRD and the API server silently prunes lastScheduled from every status write.
+1.5.0 migrates CRD storage to v1beta1, removes v1alpha1 admission endpoints and DynamoCheckpoint, and moves checkpointing to the standalone Snapshot operator. Bundled NATS is disabled by default; accepting that default removes NATS and rolls managed workloads without NATS_SERVER.
+
+**Before you start:** This guidance starts at the AICR 1.4.2 baseline. Earlier sources are outside the assessed migration range.
 
 **Steps for argocd:**
 
-1. `apply-new-crds`: helm show crds oci://ghcr.io/ai-dynamo/grove/grove-charts --version v0.1.0-alpha.13 | sed -n '/^---$/,$p' | kubectl apply --server-side --force-conflicts -f -\
-   *Why:* Neither Flux, Argo CD, nor Fleet applies a changed crds/ directory on upgrade, so the CRDs are installed out of band here too.
-2. `reconcile`: Reconcile or sync the affected releases as usual.\
-   *Why:* The deployer picks the new chart up once the CRDs are Established.
+1. `preserve-event-plane`: Export release values and Dynamo custom resources. Check for DYN_EVENT_PLANE=nats, DYN_REQUEST_PLANE=nats and NATS request tracing. If these are in use, explicitly retain global.nats.install or configure an external server through dynamo-operator.natsAddr before applying the new bundle.\
+   *Why:* The new NATS default can remove a dependency of existing workloads.
+2. `migrate-checkpointing`: If checkpointing is used, install the standalone Snapshot operator and its CRDs first, enable checkpoint.enabled, and migrate saved DynamoCheckpoint definitions to PodSnapshot before removing old resources. Update checkpointRef references to PodSnapshot.\
+   *Why:* The Dynamo operator no longer reconciles DynamoCheckpoint.
+3. `migrate-epp`: If using the Go endpoint picker, migrate its deployment and configuration to the Rust endpoint picker before upgrading.\
+   *Why:* 1.5.0 removes the Go EPP implementation.
+4. `reconcile-api-and-runtime`: Update externally managed admission webhook paths and apiVersions to v1beta1. Apply the bundle with its CRDs and let the built-in storage migrator convert existing objects. Verify storedVersions, webhook readiness and reconciliation of existing deployments. Supply a main-component image; for non-semver image tags or digests, set runtimeVersionOverride to the actual runtime version.\
+   *Why:* Removed admission endpoints break requests, and runtime feature defaults depend on the workload image rather than operator version.
 
 **References:**
 
-- https://github.com/NVIDIA/aicr/blob/main/docs/user/component-catalog.md#grove-v010-alpha12-to-v010-alpha13
-- https://github.com/ai-dynamo/grove/releases/tag/v0.1.0-alpha.13
-- https://github.com/ai-dynamo/grove/issues/809
+- https://github.com/ai-dynamo/dynamo/releases/tag/v1.5.0
+- https://github.com/ai-dynamo/dynamo/blob/v1.5.0/deploy/helm/charts/platform/README.md
