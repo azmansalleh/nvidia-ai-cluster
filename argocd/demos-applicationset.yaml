@@ -1,0 +1,48 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: demos
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions:
+    - missingkey=error
+  generators:
+    - git:
+        repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+        revision: main
+        files:
+          - path: demos/*/config.yaml
+      selector:
+        matchLabels:
+          enabled: "true"
+  template:
+    metadata:
+      name: 'demo-{{ .name }}'
+      namespace: argocd
+      labels:
+        app.kubernetes.io/part-of: demo
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/azmansalleh/nv-ai-cluster.git
+        targetRevision: main
+        path: 'demos/{{ .name }}/manifests'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'demo-{{ .name }}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 10s
+            factor: 2
+            maxDuration: 2m
+  syncPolicy:
+    applicationsSync: sync
+    preserveResourcesOnDeletion: false

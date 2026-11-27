@@ -25,3 +25,5 @@ Configuration generated with AICR 1.3.0 and reconciled by Argo CD.
 | Snapshot | 0.3.0 | `snapshot` |
 
 GPU Operator, Node Feature Discovery, Prometheus, and gateways are managed separately.
+
+[Demo use cases](demos/README.md).
